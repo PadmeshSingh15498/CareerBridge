@@ -1,0 +1,122 @@
+version: "3.8"
+
+# ==============================================================================
+# CareerBridge Production Docker Compose Stack
+# Multi-container hardened production orchestration
+# Usage: docker compose -f docker-compose.prod.yml up -d
+# ==============================================================================
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: careerbridge-prod-mysql
+    restart: always
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --sql-mode=STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION
+      --max_connections=200
+      --innodb_buffer_pool_size=512M
+      --innodb_log_file_size=128M
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required in production}
+      MYSQL_DATABASE: careerbridge_prod
+      MYSQL_USER: ${MYSQL_USER:-cb_app_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required in production}
+    volumes:
+      - prod_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${MYSQL_USER:-cb_app_user}", "-p${MYSQL_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    networks:
+      - careerbridge-prod-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: careerbridge-prod-backend
+    restart: always
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=False
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-cb_app_user}:${MYSQL_PASSWORD}@mysql:3306/careerbridge_prod?charset=utf8mb4
+      - DATABASE_POOL_SIZE=20
+      - DATABASE_MAX_OVERFLOW=40
+      - ENABLE_DB_FALLBACK=False
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required in production}
+      - ADMIN_INVITE_TOKEN=${ADMIN_INVITE_TOKEN:?ADMIN_INVITE_TOKEN is required in production}
+      - COOKIE_SECURE=True
+      - COOKIE_SAMESITE=lax
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS:-["https://careerbridge.yourdomain.edu"]}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - AI_MOCK_FALLBACK=False
+      - STORAGE_DIR=/app/storage/resumes
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - prod_resume_storage:/app/storage/resumes
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    networks:
+      - careerbridge-prod-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.careerbridge.yourdomain.edu}
+    container_name: careerbridge-prod-frontend
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://api.careerbridge.yourdomain.edu}
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    networks:
+      - careerbridge-prod-net
+
+volumes:
+  prod_mysql_data:
+    name: careerbridge_prod_mysql_data
+  prod_resume_storage:
+    name: careerbridge_prod_resume_storage
+
+networks:
+  careerbridge-prod-net:
+    driver: bridge
+

@@ -1,0 +1,80 @@
+# ==============================================================================
+# CareerBridge Render Infrastructure Blueprint (render.yaml)
+# Docs: https://render.com/docs/blueprint-spec
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Backend API Service (FastAPI + AI Intelligence Suite)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: careerbridge-api
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: standard
+    region: oregon
+    healthCheckPath: /health
+    disk:
+      name: careerbridge-resumes
+      mountPath: /app/storage/resumes
+      sizeGB: 10
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DATABASE_URL
+        fromDatabase:
+          name: careerbridge-mysql
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_INVITE_TOKEN
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: lax
+      - key: ENABLE_DB_FALLBACK
+        value: "false"
+      - key: BACKEND_CORS_ORIGINS
+        value: '["https://careerbridge-ui.onrender.com"]'
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: AI_MOCK_FALLBACK
+        value: "false"
+      - key: STORAGE_DIR
+        value: /app/storage/resumes
+
+  # ----------------------------------------------------------------------------
+  # Frontend Web Service (Next.js 14 App Router)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: careerbridge-ui
+    env: node
+    plan: standard
+    region: oregon
+    buildCommand: cd frontend && npm ci && npm run build
+    startCommand: cd frontend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: careerbridge-api
+          property: host
+
+databases:
+  # ----------------------------------------------------------------------------
+  # Managed Relational Database
+  # ----------------------------------------------------------------------------
+  - name: careerbridge-mysql
+    databaseName: careerbridge_prod
+    user: cb_app_user
+    plan: standard
+    region: oregon
+

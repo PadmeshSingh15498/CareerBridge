@@ -1,0 +1,101 @@
+# ==============================================================================
+# CareerBridge Master .gitignore
+# ==============================================================================
+
+# Node.js & Next.js
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
+
+# Python & Virtual Environments
+venv/
+.venv/
+backend/venv/
+backend/.venv/
+__pycache__/
+*/__pycache__/
+*/*/__pycache__/
+*/*/*/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+backend/.pytest_cache/
+.coverage
+backend/.coverage
+htmlcov/
+backend/htmlcov/
+
+# Local databases, persistent data & binary uploads
+*.db
+*.sqlite
+*.sqlite3
+careerbridge.db
+backend/careerbridge.db
+careerbridge_test.db
+backend/careerbridge_test.db
+backend/mysql_data/
+mysql_data/
+backend/storage/resumes/*
+!backend/storage/resumes/.gitkeep
+backend/storage/test_resumes/*
+!backend/storage/test_resumes/.gitkeep
+
+# Sensitive Environment Configurations
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+!backend/.env.production.example
+!backend/.env.test.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+!frontend/.env.production.example
+
+# IDE, Editor & OS Artefacts
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+ehthumbs.db
+*.log
+logs/
+
+# Additional build and temporary files
+.next/
+.next_backup/
+dist/
+build/
+out/
+*.log.*
+
+# Python environments and test artifacts
+.tox/
+.mypy_cache/
+.ruff_cache/
+venv/
+.envrc
+
+# Uploaded files and generated reports
+uploads/
+backend/uploads/
+backend/storage/
+!backend/storage/resumes/
+!backend/storage/resumes/.gitkeep
+!backend/storage/test_resumes/
+!backend/storage/test_resumes/.gitkeep
